@@ -36,7 +36,7 @@ lapply(packReq, function(x) {
 ###############################################################################
 #Set options to local vs s3 and define S3 ENV variables
 ###############################################################################
-MethOut <- c("local", "s3")[1] # CHANGE ME FOR DESIRED CONFIGURATION
+MethOut <- c("local")[1] # CHANGE ME FOR DESIRED CONFIGURATION
 
 if(MethOut == "s3"){
 #Set ENV variables
@@ -60,8 +60,9 @@ S3PathUpld <- base::Sys.getenv("S3PATHUPLD")
 DirUsr <- c(
   dd = "~/eddy/data/CLM/surf",
   sw = "/Users/sweintraub/Documents/GitHub/NCAR-NEON/surfaceData",
+  rf = '~/Documents/NCAR-NEON/',
   dock = tempdir()
-)["dd"] # CHANGE ME FOR CURRENT USER
+)["rf"] # CHANGE ME FOR CURRENT USER
 
 #Create input output directories
   inputs <- DirUsr
