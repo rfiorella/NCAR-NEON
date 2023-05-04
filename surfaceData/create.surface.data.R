@@ -60,7 +60,7 @@ S3PathUpld <- base::Sys.getenv("S3PATHUPLD")
 DirUsr <- c(
   dd = "~/eddy/data/CLM/surf",
   sw = "/Users/sweintraub/Documents/GitHub/NCAR-NEON/surfaceData",
-  rf = '~/Documents/NCAR-NEON/',
+  rf = '~/Documents/NCAR-NEON/surfaceData',
   dock = tempdir()
 )["rf"] # CHANGE ME FOR CURRENT USER
 
@@ -181,7 +181,11 @@ for (i in 1:length(mgp_all.list)) {
   #i <- 1 
   
   #Grab the same tower lat and lon
-  tmpMeta <- try(accs::retrieve.location.metadata(resturl='http://den-prodcdsllb-1.ci.neoninternal.org/cdsWebApp', namedlocation=names(mgp_all.list[i]), includedescendants=TRUE, request = c('LatTow','LonTow')), silent = TRUE)
+  tmpMeta <- try(accs::retrieve.location.metadata(resturl='http://den-prodcdsllb-1.ci.neoninternal.org/cdsWebApp', 
+                                                  namedlocation=names(mgp_all.list[i]), 
+                                                  includedescendants=TRUE, 
+                                                  request = c('LatTow','LonTow')), 
+                 silent = TRUE)
   
   #Logical test for metadata return (test for error message)
   if(class(tmpMeta) != "try-error"){
@@ -194,6 +198,26 @@ for (i in 1:length(mgp_all.list)) {
   write.csv(mgp_all.list[[i]], file = paste0(outputs,"/", names(mgp_all.list[i]), "_surfaceData.csv"), row.names = FALSE)
 }
 
+# reduce each site and weight by thickness and density of each profile:
+reduced <- mgp_all.2 %>%
+  dplyr::mutate(dz = .data$biogeoBottomDepth - .data$biogeoTopDepth) %>%
+  group_by(.data$siteID) %>%
+  summarize(lat = decimalLatitude[1], lon = decimalLongitude[1],
+            elev = elevation[1],
+            sand = round(sum(dz*sandTotal*bulkDensExclCoarseFrag, na.rm = T)/sum(dz*bulkDensExclCoarseFrag, na.rm = T), 2),
+            silt = round(sum(dz*siltTotal*bulkDensExclCoarseFrag, na.rm = T)/sum(dz*bulkDensExclCoarseFrag, na.rm = T), 2),
+            clay = round(sum(dz*clayTotal*bulkDensExclCoarseFrag, na.rm = T)/sum(dz*bulkDensExclCoarseFrag, na.rm = T), 2))
+  
+# restructure to match *_soildata.txt
+reduced2 <- reduced %>%
+  dplyr::select(siteID, sand, clay) %>%
+  dplyr::rename(`layer_sand%` = sand, `layer_clay%` = clay) %>%
+  dplyr::mutate(soil_depth = -999, n_layers = 1, layer_depth = -999) %>%
+  dplyr::mutate(site_code = paste0("ne", siteID)) %>%
+  dplyr::select(-siteID) %>%
+  dplyr::relocate(site_code, soil_depth, n_layers, layer_depth, `layer_sand%`,`layer_clay%`)
+
+write.csv(reduced2, file = paste0(outputs,'/NEON_soildata.txt'), row.names = FALSE)
 
 ##############################################################################
 #Prepare and write variable description metadata
